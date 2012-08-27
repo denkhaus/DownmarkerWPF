@@ -1,14 +1,12 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
+using MarkPad.Plugins;
 using MarkPad.PreviewControl;
 using MarkdownDeep;
-using System.ComponentModel.Composition;
-using MarkPad.Contracts;
 
 namespace MarkPad.Document
 {
-	[Export(typeof(IDocumentParser))]
     public class DocumentParser : IDocumentParser
     {
         static readonly Markdown Markdown = new Markdown();

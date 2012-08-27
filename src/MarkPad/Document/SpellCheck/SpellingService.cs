@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using MarkPad.Contracts;
 using NHunspell;
 
 namespace MarkPad.Document.SpellCheck
@@ -26,6 +25,11 @@ namespace MarkPad.Document.SpellCheck
         public bool Spell(string word)
         {
             return speller == null || speller.Spell(word);
+        }
+
+        public IEnumerable<string> Suggestions(string word)
+        {
+            return speller.Suggest(word);
         }
 
         public void ClearLanguages()

@@ -126,8 +126,9 @@
     <Reference Include="Ookii.Dialogs.Wpf">
       <HintPath>..\packages\Ookii.Dialogs.1.0\lib\net35\Ookii.Dialogs.Wpf.dll</HintPath>
     </Reference>
-    <Reference Include="PropertyChanged">
-      <HintPath>..\packages\PropertyChanged.Fody.1.25.0.0\Lib\NET40\PropertyChanged.dll</HintPath>
+    <Reference Include="PropertyChanged, Version=1.26.0.0, Culture=neutral, PublicKeyToken=1ca091877d12ca03, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\PropertyChanged.Fody.1.26.0.0\lib\NET40\PropertyChanged.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
@@ -164,11 +165,19 @@
     <Compile Include="Behaviors\StateHelper.cs" />
     <Compile Include="Converters\BoolToGridLengthConverter.cs" />
     <Compile Include="Converters\EnumDisplayConverter.cs" />
+    <Compile Include="Converters\NullToVisibilityConverter.cs" />
+    <Compile Include="DocumentSources\DocumentFactory.cs" />
+    <Compile Include="DocumentSources\FileMarkdownDocument.cs" />
     <Compile Include="DocumentSources\FileSystem\FileSystemSiteItem.cs" />
     <Compile Include="DocumentSources\FileSystem\JekyllSiteContext.cs" />
-    <Compile Include="DocumentSources\ISiteContext.cs" />
+    <Compile Include="DocumentSources\HelpDocument.cs" />
+    <Compile Include="DocumentSources\IDocumentFactory.cs" />
     <Compile Include="DocumentSources\ISiteContextGenerator.cs" />
-    <Compile Include="DocumentSources\SiteItemBase.cs" />
+    <Compile Include="DocumentSources\MarkpadDocumentBase.cs" />
+    <Compile Include="DocumentSources\MetaWeblog\BlogService.cs" />
+    <Compile Include="DocumentSources\MetaWeblog\IBlogService.cs" />
+    <Compile Include="DocumentSources\NewMarkpadDocument.cs" />
+    <Compile Include="DocumentSources\SiteItem.cs" />
     <Compile Include="DocumentSources\MetaWeblog\Entry.cs" />
     <Compile Include="DocumentSources\MetaWeblog\OpenFromWebView.xaml.cs">
       <DependentUpon>OpenFromWebView.xaml</DependentUpon>
@@ -184,8 +193,8 @@
     <Compile Include="DocumentSources\MetaWeblog\Service\Generated\MetaWeblog.generated.cs">
       <DependentUpon>MetaWeblog.tt</DependentUpon>
       <AutoGen>True</AutoGen>
-      <SubType>Component</SubType>
       <DesignTime>True</DesignTime>
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="DocumentSources\MetaWeblog\Service\IMetaWeblogService.cs" />
     <Compile Include="DocumentSources\MetaWeblog\Service\MediaObject.cs" />
@@ -201,6 +210,7 @@
     <Compile Include="DocumentSources\MetaWeblog\Service\Source.cs" />
     <Compile Include="DocumentSources\MetaWeblog\Service\UserInfo.cs" />
     <Compile Include="DocumentSources\SiteContextGenerator.cs" />
+    <Compile Include="DocumentSources\WebMarkdownFile.cs" />
     <Compile Include="Document\Controls\FloatingToolBar.cs" />
     <Compile Include="Document\Controls\HyperlinkEditorView.xaml.cs">
       <DependentUpon>HyperlinkEditorView.xaml</DependentUpon>
@@ -224,7 +234,9 @@
     <Compile Include="Document\EditorBehaviours\TextEditorExtensions.cs" />
     <Compile Include="Document\MarkPadHyperlink.cs" />
     <Compile Include="Document\EditorBehaviours\OvertypeMode.cs" />
-    <Compile Include="Document\SpellCheck\SpellCheckProviderFactory.cs" />
+    <Compile Include="Document\SpellCheck\ISpellCheckProvider.cs" />
+    <Compile Include="Document\SpellCheck\ISpellingService.cs" />
+    <Compile Include="Document\SpellCheck\SpellingLanguages.cs" />
     <Compile Include="Document\SpellCheck\SpellingService.cs" />
     <Compile Include="Document\Events\EditorPreviewKeyDownEvent.cs" />
     <Compile Include="Document\Events\EditorTextEnteringEvent.cs" />
@@ -232,7 +244,6 @@
     <Compile Include="Events\FileDeletedEvent.cs" />
     <Compile Include="Events\FileOpenEvent.cs" />
     <Compile Include="Events\FileRenamedEvent.cs" />
-    <Compile Include="Events\PluginsChangedEvent.cs" />
     <Compile Include="Converters\InPathMultiConverter.cs" />
     <Compile Include="Helpers\DataImage.cs" />
     <Compile Include="Helpers\DataObjectExtensions.cs" />
@@ -429,10 +440,6 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MarkPad.Contracts\MarkPad.Contracts.csproj">
-      <Project>{96FA74A6-397A-4BE2-A6BF-AAD39A159DD2}</Project>
-      <Name>MarkPad.Contracts</Name>
-    </ProjectReference>
     <ProjectReference Include="..\MarkPad.PluginApi\MarkPad.Plugins.csproj">
       <Project>{E780D0E3-37A4-43D3-89C1-76053FA63752}</Project>
       <Name>MarkPad.Plugins</Name>
@@ -448,10 +455,6 @@
     <ProjectReference Include="..\Plugins\ExportToHtmlPlugin\ExportToHtmlPlugin.csproj">
       <Project>{F5EF3169-748F-4C96-A4A1-F33381572619}</Project>
       <Name>ExportToHtmlPlugin</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Plugins\SpellCheckPlugin\SpellCheckPlugin.csproj">
-      <Project>{2FD996E4-8647-4A21-AE43-3652F66D4685}</Project>
-      <Name>SpellCheckPlugin</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

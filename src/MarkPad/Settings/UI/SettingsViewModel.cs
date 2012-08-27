@@ -6,15 +6,14 @@ using System.Linq;
 using System.Reflection;
 using System.Windows.Media;
 using Caliburn.Micro;
+using MarkPad.Document.SpellCheck;
+using MarkPad.DocumentSources.MetaWeblog;
 using MarkPad.Events;
 using MarkPad.Framework;
-using MarkPad.Infrastructure.Plugins;
 using MarkPad.Plugins;
 using MarkPad.PreviewControl;
 using MarkPad.Settings.Models;
 using Microsoft.Win32;
-using System.ComponentModel.Composition;
-using MarkPad.Contracts;
 
 namespace MarkPad.Settings.UI
 {
@@ -25,10 +24,7 @@ namespace MarkPad.Settings.UI
         private const string MarkpadKeyName = "markpad.md";
 
         private readonly ISettingsProvider settingsService;
-        private readonly IWindowManager windowManager;
         private readonly IEventAggregator eventAggregator;
-        private readonly Func<BlogSettingsViewModel> blogSettingsCreator;
-        private readonly IPluginManager pluginManager;
         private readonly Func<IPlugin, PluginViewModel> pluginViewModelCreator;
         private readonly ISpellingService spellingService;
 
@@ -45,27 +41,22 @@ namespace MarkPad.Settings.UI
         public IEnumerable<PluginViewModel> Plugins { get; private set; }
         public IndentType IndentType { get; set; }
 
-        [ImportMany]
-        IEnumerable<IPlugin> plugins;
+        readonly IList<IPlugin> plugins;
 
         public SettingsViewModel(
             ISettingsProvider settingsService,
-            IWindowManager windowManager,
             IEventAggregator eventAggregator,
-            Func<BlogSettingsViewModel> blogSettingsCreator,
-            IPluginManager pluginManager,
             Func<IPlugin, PluginViewModel> pluginViewModelCreator,
-            ISpellingService spellingService)
+            ISpellingService spellingService, 
+            IEnumerable<IPlugin> plugins, 
+            IBlogService blogService)
         {
             this.settingsService = settingsService;
-            this.windowManager = windowManager;
             this.eventAggregator = eventAggregator;
-            this.blogSettingsCreator = blogSettingsCreator;
-            this.pluginManager = pluginManager;
             this.pluginViewModelCreator = pluginViewModelCreator;
             this.spellingService = spellingService;
-
-            this.pluginManager.Container.ComposeParts(this);
+            this.blogService = blogService;
+            this.plugins = plugins.ToList();
         }
 
         public void Initialize()
@@ -73,7 +64,7 @@ namespace MarkPad.Settings.UI
             InitialiseExtensions();
 
             var settings = settingsService.GetSettings<MarkPadSettings>();
-            var blogs = settings.GetBlogs();
+            var blogs = blogService.GetBlogs();
 
             Blogs = new ObservableCollection<BlogSetting>(blogs);
 
@@ -81,9 +72,7 @@ namespace MarkPad.Settings.UI
             FontSizes = Enum.GetValues(typeof(FontSizes)).OfType<FontSizes>().ToArray();
             FontFamilies = Fonts.SystemFontFamilies.OrderBy(f => f.Source);
 
-            var spellCheckPlugin = plugins.OfType<SpellCheckPlugin.SpellCheckPluginSettings>().FirstOrDefault();
-
-            SelectedLanguage = spellCheckPlugin != null ? spellCheckPlugin.Language : SpellingLanguages.UnitedStates;
+            SelectedLanguage = settings.Language;
 
             var fontFamily = settings.FontFamily;
             SelectedFontFamily = Fonts.SystemFontFamilies.FirstOrDefault(f => f.Source == fontFamily);
@@ -133,6 +122,8 @@ namespace MarkPad.Settings.UI
         }
 
         private BlogSetting currentBlog;
+        readonly IBlogService blogService;
+
         public BlogSetting CurrentBlog
         {
             get { return currentBlog; }
@@ -171,25 +162,15 @@ namespace MarkPad.Settings.UI
 
         public bool AddBlog()
         {
-            var blog = new BlogSetting { BlogName = "New", Language = "HTML" };
+            var blog = blogService.AddBlog();
 
-            blog.BeginEdit();
-
-            var blogSettings = blogSettingsCreator();
-            blogSettings.InitializeBlog(blog);
-
-            var result = windowManager.ShowDialog(blogSettings);
-            if (result != true)
+            if (blog != null)
             {
-                blog.CancelEdit();
-                return false;
+                Blogs.Add(blog);
+                return true;
             }
 
-            blog.EndEdit();
-
-            Blogs.Add(blog);
-
-            return true;
+            return false;
         }
 
         public bool CanEditBlog { get { return currentBlog != null; } }
@@ -198,20 +179,7 @@ namespace MarkPad.Settings.UI
         {
             if (CurrentBlog == null) return;
 
-            CurrentBlog.BeginEdit();
-
-            var blogSettings = blogSettingsCreator();
-            blogSettings.InitializeBlog(CurrentBlog);
-
-            var result = windowManager.ShowDialog(blogSettings);
-
-            if (result != true)
-            {
-                CurrentBlog.CancelEdit();
-                return;
-            }
-
-            CurrentBlog.EndEdit();
+            blogService.EditBlog(CurrentBlog);
         }
 
         public bool CanRemoveBlog { get { return currentBlog != null; } }
@@ -224,7 +192,10 @@ namespace MarkPad.Settings.UI
         public void RemoveBlog()
         {
             if (CurrentBlog != null)
+            {
+                blogService.Remove(CurrentBlog);
                 Blogs.Remove(CurrentBlog);
+            }
         }
 
         public void ResetFont()
@@ -241,22 +212,13 @@ namespace MarkPad.Settings.UI
 
             var settings = settingsService.GetSettings<MarkPadSettings>();
 
-            settings.SaveBlogs(Blogs.ToList());
             settings.FontSize = SelectedFontSize;
             settings.FontFamily = SelectedFontFamily.Source;
             settings.FloatingToolBarEnabled = EnableFloatingToolBar;
             settings.IndentType = IndentType;
+            settings.Language = SelectedLanguage;
 
             settingsService.SaveSettings(settings);
-
-            // TODO: Move to per-plugin setting screen
-            var spellCheckPluginSettings = plugins.OfType<SpellCheckPlugin.SpellCheckPluginSettings>().FirstOrDefault();
-
-            if (spellCheckPluginSettings != null)
-            {
-                spellCheckPluginSettings.Language = SelectedLanguage;
-                settingsService.SaveSettings(spellCheckPluginSettings);
-            }
 
             eventAggregator.Publish(new SettingsChangedEvent());
         }

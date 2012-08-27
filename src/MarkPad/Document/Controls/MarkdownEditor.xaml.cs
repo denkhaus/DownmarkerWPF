@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Xml;
 using Caliburn.Micro;
@@ -16,6 +17,7 @@ using ICSharpCode.AvalonEdit.Rendering;
 using MarkPad.Document.Commands;
 using MarkPad.Document.EditorBehaviours;
 using MarkPad.Document.Events;
+using MarkPad.Document.SpellCheck;
 using MarkPad.Framework;
 using MarkPad.Settings.Models;
 
@@ -32,6 +34,7 @@ namespace MarkPad.Document.Controls
         public MarkdownEditor()
         {
             InitializeComponent();
+            NameScope.SetNameScope(EditorContextMenu, NameScope.GetNameScope(this));
 
             Editor.TextArea.SelectionChanged += SelectionChanged;
             Editor.PreviewMouseLeftButtonUp += HandleMouseUp;
@@ -315,6 +318,51 @@ namespace MarkPad.Document.Controls
             {
                 e.CanExecute = !Editor.TextArea.Selection.IsEmpty;
             }
+        }
+
+        void EditorContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            // don't show menu if we bail out with return
+            e.Handled = true;
+
+            if (SpellCheckProvider == null) return;
+
+            // Bail out if the mouse isn't over the markdownEditor
+            var editorPosition = Editor.GetPositionFromPoint(Mouse.GetPosition(Editor));
+            if (!editorPosition.HasValue) return;
+
+            var offset = Editor.Document.GetOffset(editorPosition.Value.Line, editorPosition.Value.Column);
+            var errorSegments = SpellCheckProvider.GetSpellCheckErrors();
+            var misspelledSegment = errorSegments.FirstOrDefault(segment => segment.StartOffset <= offset && segment.EndOffset >= offset);
+            if (misspelledSegment == null) return;
+
+            // check if the clicked offset is the beginning or end of line to prevent snapping to it (like in text selection) with GetPositionFromPoint
+            // in practice makes context menu not show when clicking on the first character of a line
+            var currentLine = Document.GetLineByOffset(offset);
+            if (offset == currentLine.Offset || offset == currentLine.EndOffset)
+            {
+                return;
+            }
+
+            EditorContextMenu.Tag = misspelledSegment;
+            EditorContextMenu.ItemsSource = SpellCheckProvider.GetSpellcheckSuggestions(editor.Document.GetText(misspelledSegment));
+            e.Handled = false;
+        }
+
+        void SpellcheckerWordClick(object sender, RoutedEventArgs e)
+        {
+            var word = (string)(e.OriginalSource as FrameworkElement).DataContext;
+            var segment = (TextSegment)EditorContextMenu.Tag;
+            Editor.Document.Replace(segment, word);
+         }
+
+        public static readonly DependencyProperty SpellcheckProviderProperty =
+            DependencyProperty.Register("SpellCheckProvider", typeof (ISpellCheckProvider), typeof (MarkdownEditor), new PropertyMetadata(default(ISpellCheckProvider)));
+
+        public ISpellCheckProvider SpellCheckProvider
+        {
+            get { return (ISpellCheckProvider) GetValue(SpellcheckProviderProperty); }
+            set { SetValue(SpellcheckProviderProperty, value); }
         }
     }
 }
